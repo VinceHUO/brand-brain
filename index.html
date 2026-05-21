@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品牌大脑 · 竞标产品架构</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif; background: #F0F2F5; color: #1a1a1a; }
+
+  /* ── Header ── */
+  .header { background: #0D1B2A; padding: 36px 48px 32px; }
+  .header h1 { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: 0.02em; }
+  .header p { margin-top: 8px; color: #8B9AB0; font-size: 14px; }
+  .header-meta { display: flex; gap: 24px; margin-top: 16px; }
+  .header-meta span { font-size: 12px; color: #5A7090; background: #1A2D42; padding: 4px 12px; border-radius: 20px; }
+
+  /* ── Section titles ── */
+  .section-wrap { padding: 40px 48px; }
+  .section-title { font-size: 13px; font-weight: 600; color: #6B7280; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: #E5E7EB; }
+
+  /* ── Pipeline flow ── */
+  .pipeline { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+  .pipe-node { flex: 1; min-width: 140px; cursor: pointer; position: relative; }
+  .pipe-node-inner { padding: 18px 16px; background: #fff; border: 2px solid transparent; border-radius: 12px; margin: 0 6px; transition: all 0.2s; height: 100%; }
+  .pipe-node:first-child .pipe-node-inner { margin-left: 0; }
+  .pipe-node:last-child .pipe-node-inner { margin-right: 0; }
+  .pipe-node-inner:hover { border-color: var(--color); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .pipe-node.active .pipe-node-inner { border-color: var(--color); background: var(--bg); }
+  .pipe-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--color); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; font-size: 18px; }
+  .pipe-num { font-size: 11px; color: #9CA3AF; font-weight: 600; margin-bottom: 2px; }
+  .pipe-name { font-size: 14px; font-weight: 700; color: #111; line-height: 1.3; }
+  .pipe-sub { font-size: 12px; color: #6B7280; margin-top: 4px; line-height: 1.4; }
+  .pipe-arrow { display: flex; align-items: center; padding: 0 2px; color: #CBD5E1; font-size: 18px; flex-shrink: 0; }
+
+  /* ── Module detail ── */
+  .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .module-card { background: #fff; border-radius: 14px; overflow: hidden; border: 1.5px solid #E5E7EB; transition: box-shadow 0.2s; }
+  .module-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
+  .module-card.highlighted { border-color: var(--color); }
+  .card-header { padding: 18px 20px 14px; border-bottom: 1px solid #F3F4F6; display: flex; align-items: center; gap: 12px; }
+  .card-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--color); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .card-title { font-size: 15px; font-weight: 700; color: #111; }
+  .card-subtitle { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
+  .card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .card-row { display: flex; flex-direction: column; gap: 4px; }
+  .row-label { font-size: 11px; font-weight: 600; color: #9CA3AF; letter-spacing: 0.06em; text-transform: uppercase; }
+  .row-content { font-size: 13px; color: #374151; line-height: 1.6; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
+  .tag-blue { background: #EFF6FF; color: #2563EB; }
+  .tag-green { background: #F0FDF4; color: #16A34A; }
+  .tag-purple { background: #FAF5FF; color: #7C3AED; }
+  .tag-orange { background: #FFF7ED; color: #EA580C; }
+  .tag-red { background: #FFF1F2; color: #E11D48; }
+  .tag-gray { background: #F3F4F6; color: #4B5563; }
+  .tag-teal { background: #F0FDFA; color: #0D9488; }
+  .io-flow { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .io-box { padding: 4px 10px; border-radius: 6px; font-weight: 500; }
+  .io-in { background: #F0F9FF; color: #0369A1; border: 1px solid #BAE6FD; }
+  .io-out { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+  .io-arrow { color: #9CA3AF; font-size: 14px; }
+
+  /* ── Foundation block ── */
+  .foundation { background: #0D1B2A; border-radius: 14px; padding: 28px 32px; margin-bottom: 20px; }
+  .foundation-title { color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+  .foundation-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .foundation-item { background: #1A2D42; border-radius: 10px; padding: 14px 16px; }
+  .f-icon { font-size: 22px; margin-bottom: 8px; }
+  .f-name { font-size: 13px; font-weight: 600; color: #CBD5E1; }
+  .f-desc { font-size: 11px; color: #64748B; margin-top: 4px; line-height: 1.5; }
+  .f-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: #2D4A63; color: #7DD3FC; margin-top: 6px; font-weight: 600; }
+
+  /* ── Roadmap ── */
+  .roadmap-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .roadmap-table th { text-align: left; padding: 10px 16px; background: #1E293B; color: #94A3B8; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; }
+  .roadmap-table th:first-child { border-radius: 8px 0 0 8px; }
+  .roadmap-table th:last-child { border-radius: 0 8px 8px 0; }
+  .roadmap-table td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+  .roadmap-table tr:last-child td { border-bottom: none; }
+  .phase-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .task-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .task-list li { font-size: 12px; color: #374151; display: flex; align-items: flex-start; gap: 6px; }
+  .task-list li::before { content: '·'; color: #9CA3AF; margin-top: 1px; flex-shrink: 0; }
+  .owner-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+  .week-bar { display: flex; gap: 3px; }
+  .week-block { height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+
+  /* ── Connector overlay ── */
+  .pipeline-connector { display: flex; align-items: center; padding: 0; }
+
+  /* ── Tab nav ── */
+  .tab-nav { display: flex; gap: 4px; margin-bottom: 20px; }
+  .tab-btn { padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; background: #fff; color: #6B7280; transition: all 0.15s; }
+  .tab-btn.active { background: #0D1B2A; color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Highlight state ── */
+  .pipe-node[data-mod="0"] { --color: #64748B; --bg: #F8FAFC; }
+  .pipe-node[data-mod="1"] { --color: #2563EB; --bg: #EFF6FF; }
+  .pipe-node[data-mod="2"] { --color: #7C3AED; --bg: #FAF5FF; }
+  .pipe-node[data-mod="3"] { --color: #0D9488; --bg: #F0FDFA; }
+  .pipe-node[data-mod="4"] { --color: #EA580C; --bg: #FFF7ED; }
+  .pipe-node[data-mod="5"] { --color: #16A34A; --bg: #F0FDF4; }
+  .pipe-node[data-mod="6"] { --color: #E11D48; --bg: #FFF1F2; }
+
+  .module-card[data-mod="1"] { --color: #DBEAFE; }
+  .module-card[data-mod="2"] { --color: #EDE9FE; }
+  .module-card[data-mod="3"] { --color: #CCFBF1; }
+  .module-card[data-mod="4"] { --color: #FFEDD5; }
+  .module-card[data-mod="5"] { --color: #DCFCE7; }
+  .module-card[data-mod="6"] { --color: #FFE4E6; }
+  .card-icon[data-mod="1"] { background: #2563EB; }
+  .card-icon[data-mod="2"] { background: #7C3AED; }
+  .card-icon[data-mod="3"] { background: #0D9488; }
+  .card-icon[data-mod="4"] { background: #EA580C; }
+  .card-icon[data-mod="5"] { background: #16A34A; }
+  .card-icon[data-mod="6"] { background: #E11D48; }
+
+  @media (max-width: 900px) {
+    .module-grid { grid-template-columns: 1fr 1fr; }
+    .foundation-grid { grid-template-columns: 1fr 1fr; }
+    .section-wrap { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>品牌大脑 · 竞标产品架构</h1>
+  <p>从 Brief 输入到 PPT 交付的完整 AI 作战链路</p>
+  <div class="header-meta">
+    <span>📁 数据基座：30份方案 · 206金块</span>
+    <span>⚡ 6个功能板块</span>
+    <span>🔁 飞书 + PPT 闭环输出</span>
+    <span>📅 版本 2026.05</span>
+  </div>
+</div>
+
+<!-- Pipeline -->
+<div class="section-wrap" style="padding-bottom: 0;">
+  <div class="section-title">产品主链路</div>
+  <div class="pipeline">
+
+    <div class="pipe-node" data-mod="0" onclick="scrollToCard(0)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">🗄️</div>
+        <div class="pipe-num">BASE</div>
+        <div class="pipe-name">数据基座</div>
+        <div class="pipe-sub">知识库 · Skill · 工作流</div>
+      </div>
+    </div>
+    <div class="pipe-arrow">›</div>
+
+    <div class="pipe-node" data-mod="1" onclick="scrollToCard(1)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">📋</div>
+        <div class="pipe-num">01</div>
+        <div class="pipe-name">Brief 解读台</div>
+        <div class="pipe-sub">解析 · 分类 · QA追问</div>
+      </div>
+    </div>
+    <div class="pipe-arrow">›</div>
+
+    <div class="pipe-node" data-mod="2" onclick="scrollToCard(2)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">🏗️</div>
+        <div class="pipe-num">02</div>
+        <div class="pipe-name">框架生成台</div>
+        <div class="pipe-sub">调Skill · 骨架 · 模块</div>
+      </div>
+    </div>
+    <div class="pipe-arrow">›</div>
+
+    <div class="pipe-node" data-mod="3" onclick="scrollToCard(3)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">🔍</div>
+        <div class="pipe-num">03</div>
+        <div class="pipe-name">洞察引擎</div>
+        <div class="pipe-sub">检索 · 报告 · 挖掘</div>
+      </div>
+    </div>
+    <div class="pipe-arrow">›</div>
+
+    <div class="pipe-node" data-mod="4" onclick="scrollToCard(4)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">⚙️</div>
+        <div class="pipe-num">04</div>
+        <div class="pipe-name">策略工作台</div>
+        <div class="pipe-sub">定调 · 金块 · 内容</div>
+      </div>
+    </div>
+    <div class="pipe-arrow">›</div>
+
+    <div class="pipe-node" data-mod="5" onclick="scrollToCard(5)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">💡</div>
+        <div class="pipe-num">05</div>
+        <div class="pipe-name">执行 & 创意</div>
+        <div class="pipe-sub">Roadmap · 创意 · 出图</div>
+      </div>
+    </div>
+    <div class="pipe-arrow">›</div>
+
+    <div class="pipe-node" data-mod="6" onclick="scrollToCard(6)">
+      <div class="pipe-node-inner">
+        <div class="pipe-icon">🚀</div>
+        <div class="pipe-num">06</div>
+        <div class="pipe-name">输出闭环</div>
+        <div class="pipe-sub">飞书 · PPT · 话术</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Detail Cards -->
+<div class="section-wrap">
+  <div class="section-title">各板块详情</div>
+
+  <!-- Foundation -->
+  <div class="foundation" id="card-0">
+    <div class="foundation-title">🗄️ 数据基座 — 整个产品的知识地基</div>
+    <div class="foundation-grid">
+      <div class="foundation-item">
+        <div class="f-icon">📑</div>
+        <div class="f-name">方案原文库</div>
+        <div class="f-desc">30份竞标方案文本，pymupdf + python-pptx 提取，按品牌/类型/年份分类存储</div>
+        <div class="f-badge">已完成提取</div>
+      </div>
+      <div class="foundation-item">
+        <div class="f-icon">💎</div>
+        <div class="f-name">金块知识库</div>
+        <div class="f-desc">206个可复用金块，覆盖策略框架68 · 洞察50 · 数据基准61 · 创意25 · 事件2</div>
+        <div class="f-badge">待向量化索引</div>
+      </div>
+      <div class="foundation-item">
+        <div class="f-icon">⚡</div>
+        <div class="f-name">Skill 库</div>
+        <div class="f-desc">auto-strategy（四类框架）· strategy-workflow（6步链路）· 多视角Skill · pptx / lark-doc</div>
+        <div class="f-badge">持续迭代中</div>
+      </div>
+      <div class="foundation-item">
+        <div class="f-icon">🔄</div>
+        <div class="f-name">工作流模板</div>
+        <div class="f-desc">竞标标准SOP · Brief分析模板 · 各类方案Prompt链 · 输出格式规范</div>
+        <div class="f-badge">待建设</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modules 1-6 -->
+  <div class="module-grid">
+
+    <!-- 01 Brief -->
+    <div class="module-card" data-mod="1" id="card-1" style="grid-column:span 2;">
+      <div class="card-header">
+        <div class="card-icon" data-mod="1">📋</div>
+        <div>
+          <div class="card-title">01 · Brief 解读台</div>
+          <div class="card-subtitle">把模糊需求变成清晰的作战任务书，识别隐性诉求，生成客户 QA 追问清单</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="card-row">
+              <div class="row-label">目的 & 价值</div>
+              <div class="row-content">消除 Brief 理解偏差，避免方向跑偏。客户写的 Brief 通常只有表面目标，AI 负责挖出没说出来的隐性诉求，减少中途大改的返工成本。</div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">用户操作步骤</div>
+              <div class="row-content" style="background:#F8FAFC;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:12px;line-height:2;">
+                <span style="color:#9CA3AF;">Step 1</span> 上传 Brief 文件（PDF / PPT / Word）或粘贴飞书链接<br>
+                <span style="color:#9CA3AF;">Step 2</span> AI 自动识别方案类型，显示置信度（如：Social 85%）<br>
+                <span style="color:#9CA3AF;">Step 3</span> 输出结构化任务卡：项目背景 · 核心目标 · 受众 · KPI · 时间线 · 预算区间<br>
+                <span style="color:#9CA3AF;">Step 4</span> 「透过现象」区块：AI 标注隐性诉求和潜在风险点（红色高亮）<br>
+                <span style="color:#9CA3AF;">Step 5</span> QA 追问清单：5-8 个需向客户确认的问题，可一键复制发给客户<br>
+                <span style="color:#9CA3AF;">Step 6</span> 人工确认 / 修改后，点击「进入框架生成」带入 Step 02
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">AI 处理链路</div>
+              <div class="row-content">
+                ① <strong>文档解析</strong>：按文件类型调用对应 Skill，提取纯文本<br>
+                ② <strong>类型分类</strong>：Brief 特征 → 方案类型（含组合识别，如 Social+KOL）<br>
+                ③ <strong>结构提炼</strong>：6维度结构化输出（含「未明确」标注）<br>
+                ④ <strong>隐性挖掘</strong>：对照历史中标经验，识别客户真实诉求 vs 表面诉求<br>
+                ⑤ <strong>QA 生成</strong>：按 Brief 类型（新车上市 / 年度品牌 / 活动营销）调用对应追问模板
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="row-label">技术依赖清单</div>
+            <div style="background:#F8FAFC;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <tr style="background:#F1F5F9;">
+                  <td style="padding:7px 12px;font-weight:600;color:#475569;width:60px;">类型</td>
+                  <td style="padding:7px 12px;font-weight:600;color:#475569;">工具 / 资源</td>
+                  <td style="padding:7px 12px;font-weight:600;color:#475569;">用途</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-purple" style="font-size:10px;">Skill</span></td>
+                  <td style="padding:7px 12px;color:#374151;">pdf Skill</td>
+                  <td style="padding:7px 12px;color:#6B7280;">解析 PDF 格式 Brief</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;background:#FAFAFA;">
+                  <td style="padding:7px 12px;"><span class="tag tag-purple" style="font-size:10px;">Skill</span></td>
+                  <td style="padding:7px 12px;color:#374151;">pptx Skill</td>
+                  <td style="padding:7px 12px;color:#6B7280;">解析 PPT 格式 Brief</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-purple" style="font-size:10px;">Skill</span></td>
+                  <td style="padding:7px 12px;color:#374151;">docx Skill</td>
+                  <td style="padding:7px 12px;color:#6B7280;">解析 Word 格式 Brief</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;background:#FAFAFA;">
+                  <td style="padding:7px 12px;"><span class="tag tag-blue" style="font-size:10px;">MCP</span></td>
+                  <td style="padding:7px 12px;color:#374151;">lark-doc Skill</td>
+                  <td style="padding:7px 12px;color:#6B7280;">飞书链接直读，免下载</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-teal" style="font-size:10px;">Prompt</span></td>
+                  <td style="padding:7px 12px;color:#374151;">Brief 分类模板 ×4</td>
+                  <td style="padding:7px 12px;color:#6B7280;">新车上市 / 年度品牌 / 活动营销 / 危机公关</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;background:#FAFAFA;">
+                  <td style="padding:7px 12px;"><span class="tag tag-teal" style="font-size:10px;">Prompt</span></td>
+                  <td style="padding:7px 12px;color:#374151;">QA 追问模板</td>
+                  <td style="padding:7px 12px;color:#6B7280;">按 Brief 类型调用对应追问逻辑</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-gray" style="font-size:10px;">知识库</span></td>
+                  <td style="padding:7px 12px;color:#374151;">历史 Brief → 中标关系</td>
+                  <td style="padding:7px 12px;color:#6B7280;">隐性诉求识别的参照底座</td>
+                </tr>
+              </table>
+            </div>
+            <div style="padding:10px 12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:11px;color:#166534;line-height:1.7;">
+              ✅ <strong>无需付费外部 API</strong>，全部依赖本地 Skill + Prompt。飞书 Brief 需要飞书 Token 授权（已有 lark-doc Skill 覆盖）。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 框架生成 -->
+    <div class="module-card" data-mod="2" id="card-2" style="grid-column:span 1;">
+      <div class="card-header">
+        <div class="card-icon" data-mod="2">🏗️</div>
+        <div>
+          <div class="card-title">02 · 框架生成台</div>
+          <div class="card-subtitle">按方案类型调 Skill，一键生成中标框架骨架</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-row">
+          <div class="row-label">目的 & 价值</div>
+          <div class="row-content">30份中标方案提炼的四类框架直接可用，骨架搭建从 1 天压到 10 分钟，新人也能用专业结构起步。</div>
+        </div>
+        <div class="card-row">
+          <div class="row-label">用户操作步骤</div>
+          <div class="row-content" style="background:#F8FAFC;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:12px;line-height:2;">
+            <span style="color:#9CA3AF;">Step 1</span> 自动带入任务卡，显示识别的方案类型<br>
+            <span style="color:#9CA3AF;">Step 2</span> 确认或手动调整（可选组合类型，如 PR+Social）<br>
+            <span style="color:#9CA3AF;">Step 3</span> 生成完整框架骨架，每个模块展示「此处要论证什么」<br>
+            <span style="color:#9CA3AF;">Step 4</span> 每个模块旁显示「推荐金块」气泡（来自金块库的相关素材）<br>
+            <span style="color:#9CA3AF;">Step 5</span> 可拖拽调整模块顺序，增删章节<br>
+            <span style="color:#9CA3AF;">Step 6</span> 确认骨架，带入洞察引擎 + 策略工作台
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="row-label">技术依赖</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-purple" style="font-size:10px;white-space:nowrap;">Skill</span>
+              <span style="color:#374151;"><strong>auto-strategy Skill</strong> — 四类框架调用（Social六段论 / PR十步链 / Media五段式 / KOL六步链）</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-purple" style="font-size:10px;white-space:nowrap;">Skill</span>
+              <span style="color:#374151;"><strong>strategy-workflow Skill</strong> — 6步链路辅助</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-orange" style="font-size:10px;white-space:nowrap;">API</span>
+              <span style="color:#374151;"><strong>向量数据库</strong>（Chroma 本地 / Pinecone）— 金块语义检索，框架模块 → 相关金块召回</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-teal" style="font-size:10px;white-space:nowrap;">知识库</span>
+              <span style="color:#374151;"><strong>框架 × 金块映射表</strong> — 哪类金块适合填充哪个框架模块位置</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 洞察引擎 -->
+    <div class="module-card" data-mod="3" id="card-3" style="grid-column: span 3;">
+      <div class="card-header">
+        <div class="card-icon" data-mod="3">🔍</div>
+        <div>
+          <div class="card-title">03 · 洞察引擎</div>
+          <div class="card-subtitle">输入数据需求 → 后台路由至对应平台 → 自动分析返回洞察</div>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <!-- 左：交互逻辑 -->
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="card-row">
+              <div class="row-label">目的 & 价值</div>
+              <div class="row-content">洞察是方案有没有说服力的核心。过去策略人要自己分别登录千瓜、飞瓜、汽车之家查数据，拼在一起，耗时 1-2 天。这里变成：说一句话，系统自动判断去哪里拿数据、拿回来分析。</div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">交互方式（用户视角）</div>
+              <div class="row-content" style="background:#F8FAFC;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:12px;line-height:1.8;">
+                💬 用户输入：<em style="color:#374151;">"帮我分析理想L9近3个月在小红书的KOL投放情况，以及竞品问界M9的对比"</em><br>
+                ↓<br>
+                🤖 系统自动：识别需求 → 路由至千瓜API → 拉取数据 → AI分析 → 输出洞察卡片
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">AI 处理链路</div>
+              <div class="row-content">
+                ① <strong>意图解析</strong>：识别数据类型（KOL/内容/口碑/行业/竞品）+ 平台 + 时间范围 + 品牌<br>
+                ② <strong>数据路由</strong>：自动匹配对应 API，组合多源时并行调用<br>
+                ③ <strong>数据分析</strong>：结构化数据 → 趋势判断 + 异常识别 + 竞品差距<br>
+                ④ <strong>洞察提炼</strong>：数字背后的「为什么」和「意味着什么」<br>
+                ⑤ <strong>基准召回</strong>：对照金块库历史数据基准，给出参考值
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">输出形式</div>
+              <div class="io-flow" style="flex-wrap:wrap;gap:8px;">
+                <div class="io-box io-out">KOL投放分析卡</div>
+                <div class="io-box io-out">竞品对比图表</div>
+                <div class="io-box io-out">行业趋势摘要</div>
+                <div class="io-box io-out">可直接引用的洞察句</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右：数据源矩阵 -->
+          <div>
+            <div class="row-label" style="margin-bottom:10px;">数据 API 矩阵</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+              <div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:#0F766E;margin-bottom:4px;">千瓜数据</div>
+                <div style="font-size:11px;color:#374151;line-height:1.6;">
+                  小红书 KOL 数据<br>
+                  笔记传播分析<br>
+                  品牌投放效果<br>
+                  达人粉丝画像
+                </div>
+                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+                  <span class="tag tag-teal" style="font-size:10px;">小红书</span>
+                  <span class="tag tag-teal" style="font-size:10px;">KOL/KOC</span>
+                </div>
+              </div>
+
+              <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:#1D4ED8;margin-bottom:4px;">飞瓜数据</div>
+                <div style="font-size:11px;color:#374151;line-height:1.6;">
+                  抖音 / B站 KOL<br>
+                  视频传播数据<br>
+                  品牌投放复盘<br>
+                  热点趋势监控
+                </div>
+                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+                  <span class="tag tag-blue" style="font-size:10px;">抖音</span>
+                  <span class="tag tag-blue" style="font-size:10px;">B站</span>
+                </div>
+              </div>
+
+              <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:#C2410C;margin-bottom:4px;">新榜</div>
+                <div style="font-size:11px;color:#374151;line-height:1.6;">
+                  账号传播力排行<br>
+                  公众号 / 视频号<br>
+                  内容传播效果<br>
+                  行业热点追踪
+                </div>
+                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+                  <span class="tag tag-orange" style="font-size:10px;">公众号</span>
+                  <span class="tag tag-orange" style="font-size:10px;">视频号</span>
+                </div>
+              </div>
+
+              <div style="background:#FAF5FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:#6D28D9;margin-bottom:4px;">汽车之家</div>
+                <div style="font-size:11px;color:#374151;line-height:1.6;">
+                  用户口碑 / 评价<br>
+                  竞品车型对比<br>
+                  销量 / 关注度<br>
+                  汽车行业舆情
+                </div>
+                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+                  <span class="tag tag-purple" style="font-size:10px;">汽车垂直</span>
+                  <span class="tag tag-purple" style="font-size:10px;">口碑</span>
+                </div>
+              </div>
+
+              <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:#0369A1;margin-bottom:4px;">巨量算数</div>
+                <div style="font-size:11px;color:#374151;line-height:1.6;">
+                  抖音官方趋势<br>
+                  人群兴趣标签<br>
+                  内容热点指数<br>
+                  投放参考数据
+                </div>
+                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+                  <span class="tag tag-blue" style="font-size:10px;">抖音官方</span>
+                </div>
+              </div>
+
+              <div style="background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:10px;padding:12px;">
+                <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:4px;">Search MCP + Web</div>
+                <div style="font-size:11px;color:#374151;line-height:1.6;">
+                  实时新闻 / 报告<br>
+                  竞品传播动态<br>
+                  行研白皮书<br>
+                  无结构化数据兜底
+                </div>
+                <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">
+                  <span class="tag tag-gray" style="font-size:10px;">通用兜底</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div style="margin-top:12px;padding:10px 12px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:11px;color:#92400E;line-height:1.7;">
+              ⚠️ <strong>接入现实</strong>：千瓜/飞瓜/新榜均有商业 API，需采购订阅。汽车之家部分数据可 Web 抓取兜底。巨量算数有免费开放接口。Phase 2 建议先以 Search MCP + Web 抓取验证分析链路，API 接入作为 Phase 3 提升。
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 04 策略工作台 -->
+    <div class="module-card" data-mod="4" id="card-4" style="grid-column:span 2;">
+      <div class="card-header">
+        <div class="card-icon" data-mod="4">⚙️</div>
+        <div>
+          <div class="card-title">04 · 策略工作台</div>
+          <div class="card-subtitle">骨架 + 洞察 → 方案主线定调 → 金块召回 → 完整策略叙事</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="card-row">
+              <div class="row-label">目的 & 价值</div>
+              <div class="row-content">整个产品最核心的生产力模块。把骨架和洞察组装成有逻辑、有说服力的策略内容，同时把 30 份方案沉淀的金块作为弹药按需召回，让输出有历史依据而不是凭空生成。</div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">用户操作步骤</div>
+              <div class="row-content" style="background:#F8FAFC;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:12px;line-height:2;">
+                <span style="color:#9CA3AF;">Step 1</span> <strong>主线定调</strong>：AI 基于洞察生成 3 个策略方向（每个含大创意 + 核心主张 + 叙事逻辑），人工选一个<br>
+                <span style="color:#9CA3AF;">Step 2</span> <strong>逐模块生成</strong>：按骨架顺序，每个模块旁自动展示匹配的 S/A 金块卡片<br>
+                <span style="color:#9CA3AF;">Step 3</span> <strong>金块操作</strong>：点击金块可选择「直接引用」或「让 AI 改写融入」<br>
+                <span style="color:#9CA3AF;">Step 4</span> <strong>内容编辑</strong>：富文本区，可直接修改 AI 输出，也可输入指令让 AI 重写<br>
+                <span style="color:#9CA3AF;">Step 5</span> <strong>方案自检</strong>：完成后一键自检，对照框架规则标出逻辑缺口（红色高亮）<br>
+                <span style="color:#9CA3AF;">Step 6</span> 策略文档确认后流转至「执行 & 创意」和「输出闭环」
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="row-label">AI 处理链路</div>
+              <div class="row-content">
+                ① <strong>主线生成</strong>：洞察 × 骨架类型 × 品牌 DNA → 策略方向候选<br>
+                ② <strong>语义召回</strong>：当前模块文本 → 向量数据库检索 top-5 相关金块<br>
+                ③ <strong>内容填充</strong>：调用汽车行业 System Prompt，生成有行业质感的策略文案<br>
+                ④ <strong>自检逻辑</strong>：逐项对照框架规则库，输出「完整 / 缺失 / 薄弱」三色标注
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="row-label">技术依赖清单</div>
+            <div style="background:#F8FAFC;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <tr style="background:#F1F5F9;">
+                  <td style="padding:7px 12px;font-weight:600;color:#475569;width:60px;">类型</td>
+                  <td style="padding:7px 12px;font-weight:600;color:#475569;">工具 / 资源</td>
+                  <td style="padding:7px 12px;font-weight:600;color:#475569;">用途</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-purple" style="font-size:10px;">Skill</span></td>
+                  <td style="padding:7px 12px;color:#374151;">auto-strategy Skill</td>
+                  <td style="padding:7px 12px;color:#6B7280;">各类型策略模块内容生成</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;background:#FAFAFA;">
+                  <td style="padding:7px 12px;"><span class="tag tag-purple" style="font-size:10px;">Skill</span></td>
+                  <td style="padding:7px 12px;color:#374151;">strategy-workflow Skill</td>
+                  <td style="padding:7px 12px;color:#6B7280;">6步链路（主线定调环节）</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-orange" style="font-size:10px;">API</span></td>
+                  <td style="padding:7px 12px;color:#374151;">向量数据库（Chroma）</td>
+                  <td style="padding:7px 12px;color:#6B7280;">金块语义召回，按模块上下文检索</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;background:#FAFAFA;">
+                  <td style="padding:7px 12px;"><span class="tag tag-teal" style="font-size:10px;">Prompt</span></td>
+                  <td style="padding:7px 12px;color:#374151;">汽车行业 System Prompt</td>
+                  <td style="padding:7px 12px;color:#6B7280;">话语体系：让输出有行业质感，不像通用 AI</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;">
+                  <td style="padding:7px 12px;"><span class="tag tag-teal" style="font-size:10px;">Prompt</span></td>
+                  <td style="padding:7px 12px;color:#374151;">方案自检规则库</td>
+                  <td style="padding:7px 12px;color:#6B7280;">按框架类型的完整性 & 逻辑规则</td>
+                </tr>
+                <tr style="border-top:1px solid #F1F5F9;background:#FAFAFA;">
+                  <td style="padding:7px 12px;"><span class="tag tag-gray" style="font-size:10px;">知识库</span></td>
+                  <td style="padding:7px 12px;color:#374151;">客户 DNA 库</td>
+                  <td style="padding:7px 12px;color:#6B7280;">各客户品牌调性、历史主张，防止风格跑偏</td>
+                </tr>
+              </table>
+            </div>
+            <div style="padding:10px 12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;font-size:11px;color:#92400E;line-height:1.7;">
+              ⚠️ <strong>策略主导的核心节点</strong>：主线定调（Step 1）AI 给选项，人工必须拍板。这一步不能全自动，方向选错后面全错。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 执行创意 -->
+    <div class="module-card" data-mod="5" id="card-5" style="grid-column:span 1;">
+      <div class="card-header">
+        <div class="card-icon" data-mod="5">💡</div>
+        <div>
+          <div class="card-title">05 · 执行 & 创意</div>
+          <div class="card-subtitle">策略落地规划 + 创意发散 + 视觉出图</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-row">
+          <div class="row-label">目的 & 价值</div>
+          <div class="row-content">消除策略和执行之间的断层。直接输出可操作的传播节点规划和有视觉感的创意方向，让甲方看到「怎么做」而不只是「想什么」。</div>
+        </div>
+        <div class="card-row">
+          <div class="row-label">用户操作步骤</div>
+          <div class="row-content" style="background:#F8FAFC;border-radius:8px;padding:12px;border:1px solid #E2E8F0;font-size:12px;line-height:2;">
+            <span style="color:#9CA3AF;">Step 1</span> <strong>执行 Roadmap</strong>：选择执行周期（1/3/6个月），AI 生成带传播节点的时间线，可拖拽调整<br>
+            <span style="color:#9CA3AF;">Step 2</span> <strong>预算结构</strong>：AI 按方案类型推荐各渠道比例（参照历史数据金块），可手动调整总预算<br>
+            <span style="color:#9CA3AF;">Step 3</span> <strong>创意方向</strong>：生成 5-8 个创意角度，每个含一句话概念 + 内容形式建议<br>
+            <span style="color:#9CA3AF;">Step 4</span> <strong>视觉出图</strong>：选一个创意方向 → 输入视觉风格描述 → 调用 GPT image 生成参考图
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="row-label">技术依赖</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-red" style="font-size:10px;white-space:nowrap;">API</span>
+              <span style="color:#374151;"><strong>OpenAI Image API</strong>（DALL-E 3 / GPT-4o image）— 创意视觉参考图生成，付费调用</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-teal" style="font-size:10px;white-space:nowrap;">Prompt</span>
+              <span style="color:#374151;"><strong>排期生成 Prompt</strong> — 按节点类型（上市 / 大促 / 节日）生成传播时间线</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-gray" style="font-size:10px;white-space:nowrap;">知识库</span>
+              <span style="color:#374151;"><strong>数据基准金块（61个）</strong> — 历史预算比例、CPM 参考值、渠道效率数据</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;">
+              <span class="tag tag-teal" style="font-size:10px;white-space:nowrap;">Prompt</span>
+              <span style="color:#374151;"><strong>创意发散 Prompt</strong> — 结合策略主线生成差异化创意方向，非通用发散</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 输出闭环 -->
+    <div class="module-card" data-mod="6" id="card-6" style="grid-column:span 3;">
+      <div class="card-header">
+        <div class="card-icon" data-mod="6">🚀</div>
+        <div>
+          <div class="card-title">06 · 输出闭环</div>
+          <div class="card-subtitle">策略内容 → 飞书文档协作审阅 → 框架确认 → PPT 生成 + 配图 → 提案话术，全链路一键交付</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+
+          <!-- 子模块 A：飞书文档 -->
+          <div style="background:#F8FAFC;border-radius:10px;padding:16px;border:1px solid #E5E7EB;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+              <span style="background:#0052D9;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;">飞书文档</span> 策略大纲协作
+            </div>
+            <div style="font-size:12px;color:#374151;line-height:2;">
+              <span style="color:#9CA3AF;">Step 1</span> 点击「同步飞书」，自动在飞书创建结构化文档<br>
+              <span style="color:#9CA3AF;">Step 2</span> 策略各章节分块写入，保留标题层级<br>
+              <span style="color:#9CA3AF;">Step 3</span> 自动 @ 相关审阅人（AE / CD / 客户），发飞书通知<br>
+              <span style="color:#9CA3AF;">Step 4</span> 团队在飞书内批注修改，确认框架
+            </div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-blue" style="font-size:10px;white-space:nowrap;">MCP</span>
+                <span style="color:#374151;"><strong>lark-doc Skill</strong> — 飞书开放平台 Docs API，创建文档 + 写入内容</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-blue" style="font-size:10px;white-space:nowrap;">MCP</span>
+                <span style="color:#374151;"><strong>lark-im Skill</strong> — 飞书 IM API，自动发送通知 + @审阅人</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-blue" style="font-size:10px;white-space:nowrap;">MCP</span>
+                <span style="color:#374151;"><strong>lark-contact Skill</strong> — 获取团队成员信息用于 @</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 子模块 B：PPT 生成 -->
+          <div style="background:#F8FAFC;border-radius:10px;padding:16px;border:1px solid #E5E7EB;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+              <span style="background:#E11D48;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;">PPT</span> 框架确认后出稿
+            </div>
+            <div style="font-size:12px;color:#374151;line-height:2;">
+              <span style="color:#9CA3AF;">Step 1</span> 飞书框架确认后，点击「生成 PPT」<br>
+              <span style="color:#9CA3AF;">Step 2</span> 选择客户品牌模板（品牌色 / 字体 / 版式）<br>
+              <span style="color:#9CA3AF;">Step 3</span> AI 逐页生成：页面主题 + 核心信息点 + 图表建议<br>
+              <span style="color:#9CA3AF;">Step 4</span> 每页视觉位自动触发 GPT image 生成配图候选<br>
+              <span style="color:#9CA3AF;">Step 5</span> 人工选图确认 → 合并为完整 .pptx 文件下载
+            </div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-purple" style="font-size:10px;white-space:nowrap;">Skill</span>
+                <span style="color:#374151;"><strong>pptx Skill</strong> — .pptx 文件生成，支持模板套用 + 内容填充</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-blue" style="font-size:10px;white-space:nowrap;">MCP</span>
+                <span style="color:#374151;"><strong>lark-slides Skill</strong> — 飞书演示文稿（备选，适合直接飞书演示场景）</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-red" style="font-size:10px;white-space:nowrap;">API</span>
+                <span style="color:#374151;"><strong>OpenAI Image API</strong> — 每页配图生成（付费，按页数计）</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-gray" style="font-size:10px;white-space:nowrap;">资源</span>
+                <span style="color:#374151;"><strong>PPT 品牌模板库</strong> — 各客户模板 .pptx，需人工维护</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 子模块 C：提案话术 -->
+          <div style="background:#F8FAFC;border-radius:10px;padding:16px;border:1px solid #E5E7EB;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+              <span style="background:#16A34A;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;">话术</span> 提案口播稿
+            </div>
+            <div style="font-size:12px;color:#374151;line-height:2;">
+              <span style="color:#9CA3AF;">Step 1</span> 选择提案时长（5 分钟 / 15 分钟 / 30 分钟）<br>
+              <span style="color:#9CA3AF;">Step 2</span> 选择受众类型（客户市场部 / CMO / 外部评审）<br>
+              <span style="color:#9CA3AF;">Step 3</span> AI 生成逐页口播稿，含「重点强调」和「预判追问」<br>
+              <span style="color:#9CA3AF;">Step 4</span> 可针对某页重新生成，或指令修改语气（更口语 / 更正式）<br>
+              <span style="color:#9CA3AF;">Step 5</span> 导出 Word 格式，附 PPT 页码对应
+            </div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-teal" style="font-size:10px;white-space:nowrap;">Prompt</span>
+                <span style="color:#374151;"><strong>话术生成 Prompt</strong> — 按时长 × 受众类型 × 方案类型的话术模板</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-purple" style="font-size:10px;white-space:nowrap;">Skill</span>
+                <span style="color:#374151;"><strong>docx Skill</strong> — 话术导出为 Word 文档</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;">
+                <span class="tag tag-gray" style="font-size:10px;white-space:nowrap;">知识库</span>
+                <span style="color:#374151;"><strong>客户偏好记录</strong> — 该客户过去对哪类表达有正面反馈</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div style="margin-top:16px;padding:12px 16px;background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;font-size:12px;color:#0369A1;line-height:1.8;">
+          💡 <strong>闭环逻辑</strong>：飞书文档是「人工确认节点」，不是装饰步骤——框架没有在飞书上确认，PPT 就不生成。这个设计避免了「AI 生成了一半内容发现方向跑偏」的浪费。话术在 PPT 确认后生成，保证口播和页面完全对应。
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Roadmap -->
+<div class="section-wrap" style="background: #fff; margin: 0; padding: 40px 48px;">
+  <div class="section-title" style="color:#374151;">建设路线图 & 任务分工</div>
+  <table class="roadmap-table">
+    <thead>
+      <tr>
+        <th>阶段</th>
+        <th>时间</th>
+        <th>核心任务</th>
+        <th>负责方向</th>
+        <th>完成标志</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="phase-badge" style="background:#1E293B;color:#94A3B8;">Phase 0</span></td>
+        <td style="color:#374151;font-weight:600;white-space:nowrap;">Week 1–2</td>
+        <td>
+          <ul class="task-list">
+            <li>30份方案文本向量化入库（embedding + 向量数据库选型）</li>
+            <li>206金块标签体系标准化（品牌 × 平台 × 场景 × 类型）</li>
+            <li>现有 Skill 梳理 & 接口规范定义</li>
+            <li>工作流 SOP 初稿</li>
+          </ul>
+        </td>
+        <td>
+          <span class="owner-badge" style="background:#FEF3C7;color:#92400E;">技术主导</span><br><br>
+          <span class="owner-badge" style="background:#EDE9FE;color:#5B21B6;">策略配合</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">金块可按语义检索到</td>
+      </tr>
+      <tr>
+        <td><span class="phase-badge" style="background:#DBEAFE;color:#1D4ED8;">Phase 1</span></td>
+        <td style="color:#374151;font-weight:600;white-space:nowrap;">Week 2–3</td>
+        <td>
+          <ul class="task-list">
+            <li>Brief 解析 Prompt 模板建设（汽车上市 / 年度品牌 / 活动营销等分类）</li>
+            <li>方案类型识别逻辑开发 & 测试</li>
+            <li>QA 追问清单生成规则</li>
+            <li>Brief 台交互原型验证（3份真实 Brief 测试）</li>
+          </ul>
+        </td>
+        <td>
+          <span class="owner-badge" style="background:#DCFCE7;color:#166534;">策略主导</span><br><br>
+          <span class="owner-badge" style="background:#FEF3C7;color:#92400E;">Claude Code</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">输入Brief能出任务卡</td>
+      </tr>
+      <tr>
+        <td><span class="phase-badge" style="background:#CCFBF1;color:#0F766E;">Phase 2</span></td>
+        <td style="color:#374151;font-weight:600;white-space:nowrap;">Week 3–4</td>
+        <td>
+          <ul class="task-list">
+            <li>Search MCP 接入，洞察检索 Prompt 调优</li>
+            <li>行业层知识库建设（新能源趋势 / 智驾 / 消费者洞察底座文档）</li>
+            <li>框架生成台：四类 Skill 与骨架模块对接</li>
+            <li>金块召回逻辑：骨架模块 → 语义检索相关金块</li>
+          </ul>
+        </td>
+        <td>
+          <span class="owner-badge" style="background:#DCFCE7;color:#166534;">策略主导</span><br><br>
+          <span class="owner-badge" style="background:#FEF3C7;color:#92400E;">技术 + Claude Code</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">框架+洞察联动跑通</td>
+      </tr>
+      <tr>
+        <td><span class="phase-badge" style="background:#FFEDD5;color:#C2410C;">Phase 3</span></td>
+        <td style="color:#374151;font-weight:600;white-space:nowrap;">Week 4–5</td>
+        <td>
+          <ul class="task-list">
+            <li>策略生成 Prompt 链开发（主线定调 → 各模块内容输出）</li>
+            <li>汽车行业话语体系沉淀（让输出有行业质感）</li>
+            <li>方案自检规则库建设</li>
+            <li>全链路（01→04）端到端测试，用真实竞标复盘验证质量</li>
+          </ul>
+        </td>
+        <td>
+          <span class="owner-badge" style="background:#DCFCE7;color:#166534;">策略主导</span><br><br>
+          <span class="owner-badge" style="background:#FEF3C7;color:#92400E;">Claude Code</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">Brief进去、策略出来</td>
+      </tr>
+      <tr>
+        <td><span class="phase-badge" style="background:#DCFCE7;color:#15803D;">Phase 4</span></td>
+        <td style="color:#374151;font-weight:600;white-space:nowrap;">Week 5–6</td>
+        <td>
+          <ul class="task-list">
+            <li>飞书文档集成（lark-doc Skill 输出策略大纲）</li>
+            <li>PPT 品牌模板建设 + pptx Skill 对接</li>
+            <li>GPT image API 接入（创意视觉出图）</li>
+            <li>提案话术生成模板</li>
+            <li>全链路 Demo：从 Brief 到 PPT 完整演示</li>
+          </ul>
+        </td>
+        <td>
+          <span class="owner-badge" style="background:#FEF3C7;color:#92400E;">技术主导</span><br><br>
+          <span class="owner-badge" style="background:#DCFCE7;color:#166534;">策略验收</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">完整闭环 Demo 可演示</td>
+      </tr>
+      <tr style="background:#FAFAFA;">
+        <td><span class="phase-badge" style="background:#F3E8FF;color:#7E22CE;">飞轮</span></td>
+        <td style="color:#374151;font-weight:600;white-space:nowrap;">持续</td>
+        <td>
+          <ul class="task-list">
+            <li>每次竞标结果（中标/落选）反馈到金块评级</li>
+            <li>新方案入库，金块持续扩充</li>
+            <li>Skill 根据策略团队反馈迭代优化</li>
+          </ul>
+        </td>
+        <td>
+          <span class="owner-badge" style="background:#F3E8FF;color:#7E22CE;">全员</span>
+        </td>
+        <td style="font-size:12px;color:#6B7280;">系统越用越准</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Footer note -->
+<div style="padding: 20px 48px 40px; background: #fff; border-top: 1px solid #F1F5F9;">
+  <p style="font-size: 12px; color: #9CA3AF; line-height: 1.8;">
+    <strong style="color:#374151;">关键判断：</strong>
+    Phase 0（数据基座）是整件事的地基，向量化不完成，后面所有板块的召回质量都打折。技术工作量约 3-5 天。策略工作量最重的节点在 Phase 1（Brief 分类模板）和 Phase 3（汽车话语体系沉淀），这两件事必须策略团队主导，AI 无法替代。
+  </p>
+</div>
+
+<script>
+function scrollToCard(idx) {
+  const el = document.getElementById('card-' + idx);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.querySelectorAll('.pipe-node').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('[data-mod="' + idx + '"]').forEach(n => n.classList.add('active'));
+}
+</script>
+</body>
+</html>
